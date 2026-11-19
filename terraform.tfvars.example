@@ -1,0 +1,10 @@
+# Copia este archivo a terraform.tfvars y elige una contraseña local.
+web_internal_port = 5000
+web_external_port = 5000
+web_bind_ip       = "127.0.0.1"
+
+db_host           = "db"
+db_port           = 5432
+postgres_db       = "seleccion"
+postgres_user     = "admin"
+postgres_password = "CAMBIAR_POR_UNA_CONTRASENA_LOCAL"
