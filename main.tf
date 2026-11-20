@@ -2,7 +2,9 @@ terraform {
     required_providers {
         docker = {
         source  = "kreuzwerker/docker"
-        version = "~> 3.0.2" //version hecha en clase
+        // El provider 3.0.2 usado en clase enviaba peticiones con la API 1.41.
+        // Nuestro Docker Engine 29.1.3 exige al menos la API 1.44, por eso usamos 4.6.0.
+        version = "~> 4.6.0"
         }
     }
 }
@@ -66,8 +68,7 @@ resource "docker_volume" "postgres_data" {
 }
 
 
-//El provider kreuzwerker/docker (~> 3.0.2) no descarga imágenes de Docker Hub 
-//automáticamente si no existen previamente en local.
+// Gestionamos la imagen de PostgreSQL y la referenciamos desde el contenedor db.
 resource "docker_image" "postgres" {
     name         = "postgres:17-bookworm"
     keep_locally = true
