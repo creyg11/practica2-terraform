@@ -22,7 +22,9 @@ resource "docker_image" "flask" {
 resource "docker_container" "web" {
     name  = "practica2-web"
     image = docker_image.flask.image_id //<TIPO_DE_RECURSO>.<NOMBRE_LOCAL>.<ATRIBUTO EXPORTADO>
-
+    # Flask depende de PostgreSQL. Como db tiene wait = true,
+    # Terraform arranca la web después de que la base esté saludable.
+    depends_on = [docker_container.db]
     ports {
         internal = var.web_internal_port // Puerto dentro del contenedor.
         external = var.web_external_port // Puerto publicado en tu máquina.
@@ -43,13 +45,17 @@ resource "docker_container" "web" {
         "CMD",
         "python",
         "-c",
-        "import urllib.request; urllib.request.urlopen('http://${var.web_bind_ip}:${var.web_internal_port}/health', timeout=8)"
+        "import urllib.request; urllib.request.urlopen('http://127.0.0.1:${var.web_internal_port}/health', timeout=8)"
         ]
 
         interval     = "10s"
         timeout      = "9s"
         retries      = 3
         start_period = "15s"
+    }
+
+    networks_advanced {
+        name = docker_network.app_network.name
     }
 
 }
@@ -88,6 +94,10 @@ resource "docker_container" "db" {
         read_only      = true
     }
 
+    # Terraform espera a que el healthcheck con pg_isready confirme que
+    # PostgreSQL acepta conexiones antes de dar el contenedor por creado.
+    wait = true
+
     healthcheck {
         test = [
         "CMD",
@@ -104,5 +114,15 @@ resource "docker_container" "db" {
         start_period = "10s"
     }
 
+    networks_advanced {
+        name    = docker_network.app_network.name
+        aliases = [var.db_host]
+    }
 
+
+}
+
+resource "docker_network" "app_network" {
+    name = "practica2-network"
+    driver = "bridge"
 }
