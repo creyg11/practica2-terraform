@@ -17,7 +17,7 @@ resource "docker_image" "flask" {
     keep_locally = true //Opcional: (Boolean) If true, then the Docker image won't be deleted on destroy operation.
     build {
         context    = "${path.module}/../../app"
-        dockerfile = "Dockerfile" //Opcional: (String) Name of the Dockerfile. Defaults to Dockerfile.
+        dockerfile = "Dockerfile.prod" //Opcional: (String) Name of the Dockerfile. Defaults to Dockerfile.
     }
 }
 
@@ -124,6 +124,41 @@ resource "docker_container" "db" {
     }
 
 
+}
+
+resource "docker_image" "redis" {
+    name="redis:7.4-alpine"
+    keep_locally = true
+}
+
+resource "docker_container" "redis" {
+    name    = "practica2-prod-redis"
+    image   = docker_image.redis.image_id
+    restart = "unless-stopped"
+
+    # Caché temporal: desactiva las instantáneas y el registro de escrituras.
+    command = ["redis-server", "--save", "", "--appendonly", "no"]
+
+    # Monta /data en memoria. La cadena vacía usa las opciones por defecto.
+    tmpfs = {
+        "/data" = ""
+    }
+
+    healthcheck {
+        test         = ["CMD-SHELL", "redis-cli ping | grep -qx PONG"]
+        interval     = "5s"
+        timeout      = "3s"
+        retries      = 5
+        start_period = "5s"
+    }
+
+    # Terraform da Redis por creado cuando el healthcheck pasa.
+    wait = true
+
+    networks_advanced {
+        name    = docker_network.app_network.name
+        aliases = ["redis"]
+    }
 }
 
 resource "docker_network" "app_network" {
