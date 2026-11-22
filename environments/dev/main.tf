@@ -16,7 +16,7 @@ resource "docker_image" "flask" {
     name         = "practica2-web:dev"
     keep_locally = true //Opcional: (Boolean) If true, then the Docker image won't be deleted on destroy operation.
     build {
-        context    = "${path.module}/app"
+        context    = "${path.module}/../../app"
         dockerfile = "Dockerfile" //Opcional: (String) Name of the Dockerfile. Defaults to Dockerfile.
     }
 }
@@ -90,7 +90,7 @@ resource "docker_container" "db" {
     }
 
     volumes { //Seria del compose: - ./db/init:/docker-entrypoint-initdb.d:ro
-        host_path      = abspath("${path.module}/db/init")
+        host_path      = abspath("${path.module}/../../db/init")
         container_path = "/docker-entrypoint-initdb.d"
         read_only      = true
     }

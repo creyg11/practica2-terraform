@@ -13,20 +13,23 @@ provider "docker" {} //No hace falta conf del provider porque lo hacemos en loca
 //y no necesitamos personalizar su conexión
 
 resource "docker_image" "flask" {
-    name         = "practica2-web:dev"
+    name         = "practica2-web:prod"
     keep_locally = true //Opcional: (Boolean) If true, then the Docker image won't be deleted on destroy operation.
     build {
-        context    = "${path.module}/app"
+        context    = "${path.module}/../../app"
         dockerfile = "Dockerfile" //Opcional: (String) Name of the Dockerfile. Defaults to Dockerfile.
     }
 }
 
 resource "docker_container" "web" {
-    name  = "practica2-web"
+    # Dev y prod pueden usar docker_container.web porque cada entorno tiene su propio estado.
+    # En el mismo Docker, cada contenedor necesita un nombre único.
+    name  = "practica2-prod-web"
     image = docker_image.flask.image_id //<TIPO_DE_RECURSO>.<NOMBRE_LOCAL>.<ATRIBUTO EXPORTADO>
     # Flask depende de PostgreSQL. Como db tiene wait = true,
     # Terraform arranca la web después de que la base esté saludable.
     depends_on = [docker_container.db]
+    # Cada contenedor puede escuchar en 5000. En la misma IP del host, cada entorno publica un puerto distinto.
     ports {
         internal = var.web_internal_port // Puerto dentro del contenedor.
         external = var.web_external_port // Puerto publicado en tu máquina.
@@ -63,7 +66,7 @@ resource "docker_container" "web" {
 }
 
 resource "docker_volume" "postgres_data" {
-    name = "practica2-dev-postgres-data" //Opcional: (String) The name of the Docker volume 
+    name = "practica2-prod-postgres-data" //Opcional: (String) The name of the Docker volume
                                         //(will be generated if not provided).
 }
 
@@ -75,7 +78,7 @@ resource "docker_image" "postgres" {
 }
 
 resource "docker_container" "db" {
-    name  = "practica2-db"
+    name  = "practica2-prod-db"
     image = docker_image.postgres.image_id //<TIPO_DE_RECURSO>.<NOMBRE_LOCAL>.<ATRIBUTO EXPORTADO>
     
     env = [
@@ -90,7 +93,7 @@ resource "docker_container" "db" {
     }
 
     volumes { //Seria del compose: - ./db/init:/docker-entrypoint-initdb.d:ro
-        host_path      = abspath("${path.module}/db/init")
+        host_path      = abspath("${path.module}/../../db/init")
         container_path = "/docker-entrypoint-initdb.d"
         read_only      = true
     }
@@ -124,6 +127,6 @@ resource "docker_container" "db" {
 }
 
 resource "docker_network" "app_network" {
-    name = "practica2-network"
+    name = "practica2-prod-network"
     driver = "bridge"
 }
