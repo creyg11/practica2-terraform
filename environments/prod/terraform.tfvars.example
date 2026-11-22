@@ -8,3 +8,6 @@ db_port           = 5432
 postgres_db       = "seleccion"
 postgres_user     = "admin"
 postgres_password = "CAMBIAR_POR_UNA_CONTRASENA_LOCAL"
+
+redis_host = "redis"
+redis_port = 6379

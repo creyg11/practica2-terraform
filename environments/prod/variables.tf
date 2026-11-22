@@ -38,3 +38,13 @@ variable "postgres_password" {
   type        = string
   sensitive   = true
 }
+
+variable "redis_host" {
+  description = "Alias de Redis en la red de producción que Flask usa para conectarse."
+  type        = string
+}
+
+variable "redis_port" {
+  description = "Puerto interno en el que escucha Redis."
+  type        = number
+}

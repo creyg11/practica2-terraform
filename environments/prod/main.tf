@@ -17,7 +17,7 @@ resource "docker_image" "flask" {
     keep_locally = true //Opcional: (Boolean) If true, then the Docker image won't be deleted on destroy operation.
     build {
         context    = "${path.module}/../../app"
-        dockerfile = "Dockerfile.prod" //Opcional: (String) Name of the Dockerfile. Defaults to Dockerfile.
+        dockerfile = "Dockerfile.prod" # Instala el cliente Redis y arranca Flask con Gunicorn.
     }
 }
 
@@ -26,9 +26,10 @@ resource "docker_container" "web" {
     # En el mismo Docker, cada contenedor necesita un nombre único.
     name  = "practica2-prod-web"
     image = docker_image.flask.image_id //<TIPO_DE_RECURSO>.<NOMBRE_LOCAL>.<ATRIBUTO EXPORTADO>
-    # Flask depende de PostgreSQL. Como db tiene wait = true,
-    # Terraform arranca la web después de que la base esté saludable.
-    depends_on = [docker_container.db]
+    restart = "unless-stopped"
+    # Equivale a service_healthy en Compose: db y redis tienen wait = true.
+    # Terraform crea la web cuando ambos han pasado sus comprobaciones de salud.
+    depends_on = [docker_container.db, docker_container.redis]
     # Cada contenedor puede escuchar en 5000. En la misma IP del host, cada entorno publica un puerto distinto.
     ports {
         internal = var.web_internal_port // Puerto dentro del contenedor.
@@ -36,10 +37,13 @@ resource "docker_container" "web" {
         ip       = var.web_bind_ip       // Dirección de tu máquina donde se publica el puerto.
     }
 
-    //(Set of String) Environment variables to set in the form of KEY=VALUE  
+    # En producción Flask usa Redis para el listado de jugadores y comprueba la caché en /health.
     env = [
+        "APP_ENV=production",
         "DB_HOST=${var.db_host}",
         "DB_PORT=${var.db_port}",
+        "REDIS_HOST=${var.redis_host}",
+        "REDIS_PORT=${var.redis_port}",
         "POSTGRES_DB=${var.postgres_db}",
         "POSTGRES_USER=${var.postgres_user}",
         "POSTGRES_PASSWORD=${var.postgres_password}"
@@ -61,6 +65,7 @@ resource "docker_container" "web" {
 
     networks_advanced {
         name = docker_network.app_network.name
+        aliases = ["web"]
     }
 
 }
@@ -80,6 +85,7 @@ resource "docker_image" "postgres" {
 resource "docker_container" "db" {
     name  = "practica2-prod-db"
     image = docker_image.postgres.image_id //<TIPO_DE_RECURSO>.<NOMBRE_LOCAL>.<ATRIBUTO EXPORTADO>
+    restart = "unless-stopped"
     
     env = [
         "POSTGRES_DB=${var.postgres_db}",
@@ -136,8 +142,15 @@ resource "docker_container" "redis" {
     image   = docker_image.redis.image_id
     restart = "unless-stopped"
 
-    # Caché temporal: desactiva las instantáneas y el registro de escrituras.
-    command = ["redis-server", "--save", "", "--appendonly", "no"]
+    # La imagen cambia al usuario Linux redis cuando el comando empieza por redis-server.
+    # Como aquí empieza por sh, indicamos el usuario para arrancar con sus permisos.
+    user = "redis"
+
+    # El proveedor rechaza elementos vacíos en command. La shell convierte '' en el
+    # argumento vacío de --save que desactiva las instantáneas, como en el Compose.
+    # Con «--appendonly no» se desactiva el registro AOF. exec sustituye la shell por Redis
+    # para que Docker le envíe directamente la señal de parada.
+    command = ["sh", "-c", "exec redis-server --port ${var.redis_port} --save '' --appendonly no"]
 
     # Monta /data en memoria. La cadena vacía usa las opciones por defecto.
     tmpfs = {
@@ -145,7 +158,7 @@ resource "docker_container" "redis" {
     }
 
     healthcheck {
-        test         = ["CMD-SHELL", "redis-cli ping | grep -qx PONG"]
+        test = ["CMD-SHELL", "redis-cli ping | grep -qx PONG"]
         interval     = "5s"
         timeout      = "3s"
         retries      = 5
@@ -157,7 +170,8 @@ resource "docker_container" "redis" {
 
     networks_advanced {
         name    = docker_network.app_network.name
-        aliases = ["redis"]
+        # Docker resuelve este alias dentro de la red de prod. Flask lo recibe como REDIS_HOST.
+        aliases = [var.redis_host]
     }
 }
 
