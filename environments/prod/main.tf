@@ -48,9 +48,8 @@ module "web" {
   build_context     = "${path.module}/../../app"
   dockerfile        = "Dockerfile.prod"
   network_name      = docker_network.app_network.name
-  web_bind_ip       = var.web_bind_ip
+  replica_count     = var.web_replica_count
   web_internal_port = var.web_internal_port
-  web_external_port = var.web_external_port
   aliases           = ["web"]
   restart           = "unless-stopped"
 
@@ -65,4 +64,15 @@ module "web" {
     "POSTGRES_USER=${var.postgres_user}",
     "POSTGRES_PASSWORD=${var.postgres_password}",
   ]
+}
+
+module "load_balancer" {
+  source = "../../modules/load_balancer"
+
+  container_name    = "practica2-prod-nginx"
+  network_name      = docker_network.app_network.name
+  nombres_replicas  = module.web.nombres_replicas
+  web_internal_port = var.web_internal_port
+  nginx_port        = var.nginx_port
+  nginx_bind_ip     = var.nginx_bind_ip
 }

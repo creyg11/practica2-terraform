@@ -1,0 +1,27 @@
+# «flask» es el nombre del grupo que usa proxy_pass más abajo.
+upstream flask {
+    # Nginx usa round robin ponderado por defecto cuando el upstream omite el método de balanceo.
+    # Cada línea server tiene peso 1 por defecto, así que las réplicas disponibles se turnan.
+    # https://nginx.org/en/docs/http/ngx_http_upstream_module.html#upstream
+    # Los procesos de Nginx comparten en memoria la lista de servidores y su estado.
+    zone flask 64k;
+    # DNS interno de Docker. Nginx guarda las respuestas IPv4 durante 5 segundos.
+    resolver 127.0.0.11 valid=5s ipv6=off;
+
+# Terraform recorre el output del módulo web y escribe una línea por réplica.
+# «resolve» permite a Nginx actualizar su IP si Docker vuelve a crearla con el mismo nombre.
+# Si cambia la lista de nombres, Terraform genera un fichero distinto en el siguiente apply.
+%{ for nombre in nombres ~}
+    server ${nombre}:${puerto_web} resolve;
+%{ endfor ~}
+}
+
+server {
+    # Puerto dentro del contenedor Nginx al que Docker reenvía la petición del navegador.
+    listen ${puerto_lb};
+
+    location / {
+        # Conserva la ruta solicitada (por ejemplo /jugadores) y la envía al grupo flask.
+        proxy_pass http://flask;
+    }
+}

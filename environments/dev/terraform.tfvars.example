@@ -1,7 +1,9 @@
 # Copia este archivo a terraform.tfvars y elige una contraseña local.
+# El navegador entra por Nginx y cada réplica recibe las peticiones por la red Docker.
+nginx_bind_ip     = "127.0.0.1"
+nginx_port        = 8081
+web_replica_count = 2
 web_internal_port = 5000
-web_external_port = 5000
-web_bind_ip       = "127.0.0.1"
 
 db_host           = "db"
 db_port           = 5432

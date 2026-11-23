@@ -8,22 +8,17 @@ resource "docker_image" "flask" {
 }
 
 resource "docker_container" "web" {
-  # Dev y prod pueden usar docker_container.web porque cada entorno tiene su propio estado.
-  # En el mismo Docker, cada contenedor necesita un nombre único.
-  name = var.container_name
-  # Flask muestra este hostname para identificar el contenedor que sirvió la página.
-  hostname = var.container_name
+  # count.index empieza en 0. Sumamos 1 para obtener nombres como practica2-web-1.
+  count = var.replica_count
+  name  = "${var.container_name}-${count.index + 1}"
+  # Flask muestra este hostname en /jugadores para identificar qué réplica respondió.
+  hostname = "${var.container_name}-${count.index + 1}"
   image    = docker_image.flask.image_id
   restart  = var.restart
-  # Cada contenedor puede escuchar en 5000. En la misma IP del host, cada entorno publica un puerto distinto.
-  ports {
-    internal = var.web_internal_port // Puerto dentro del contenedor.
-    external = var.web_external_port // Puerto publicado en tu máquina.
-    ip       = var.web_bind_ip       // Dirección de tu máquina donde se publica el puerto.
-  }
 
   env = var.env
 
+  # Docker comprueba /health desde el interior de cada réplica.
   healthcheck {
     test = [
       "CMD",
@@ -38,9 +33,9 @@ resource "docker_container" "web" {
     start_period = "15s"
   }
 
+  # Las réplicas escuchan en la red Docker. El puerto del host lo publica Nginx.
   networks_advanced {
     name    = var.network_name
     aliases = var.aliases
   }
-
 }

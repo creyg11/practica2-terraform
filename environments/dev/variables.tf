@@ -3,13 +3,18 @@ variable "web_internal_port" {
   type        = number
 }
 
-variable "web_external_port" {
-  description = "Puerto publicado en la máquina para acceder a la web."
+variable "web_replica_count" {
+  description = "Número de contenedores Flask entre los que Nginx reparte las peticiones."
   type        = number
 }
 
-variable "web_bind_ip" {
-  description = "Dirección IP de la máquina donde se publica el puerto de la web."
+variable "nginx_port" {
+  description = "Puerto de escucha de Nginx, publicado con el mismo número en la máquina."
+  type        = number
+}
+
+variable "nginx_bind_ip" {
+  description = "IP de la máquina donde Docker publica el puerto de Nginx."
   type        = string
 }
 

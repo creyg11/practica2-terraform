@@ -1,6 +1,17 @@
 variable "container_name" {
-  description = "Nombre del contenedor en Docker."
+  description = "Nombre base al que se añade el número de cada réplica."
   type        = string
+}
+
+variable "replica_count" {
+  description = "Número de contenedores creados a partir de la imagen Flask."
+  type        = number
+  default     = 2
+
+  validation {
+    condition     = var.replica_count >= 1 && floor(var.replica_count) == var.replica_count
+    error_message = "El grupo de servidores de Nginx necesita al menos una réplica y la cantidad debe ser entera."
+  }
 }
 
 variable "network_name" {
@@ -32,16 +43,6 @@ variable "dockerfile" {
 variable "web_internal_port" {
   description = "Puerto en el que escucha Flask."
   type        = number
-}
-
-variable "web_external_port" {
-  description = "Puerto publicado en la máquina."
-  type        = number
-}
-
-variable "web_bind_ip" {
-  description = "IP de la máquina donde se publica la web."
-  type        = string
 }
 
 variable "env" {

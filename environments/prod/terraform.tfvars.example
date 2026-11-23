@@ -1,7 +1,9 @@
 # Copia este archivo a terraform.tfvars y elige una contraseña local.
+nginx_bind_ip     = "127.0.0.1"
+nginx_port        = 8080
+# El enunciado exige al menos tres instancias web en producción.
+web_replica_count = 3
 web_internal_port = 5000
-web_external_port = 5001
-web_bind_ip       = "127.0.0.1"
 
 db_host           = "db"
 db_port           = 5432
