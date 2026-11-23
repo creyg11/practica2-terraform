@@ -35,6 +35,7 @@
                 <h2 id="services-title">Estado de los servicios</h2>
                 <span>{{ 'Producción' if is_production else 'Desarrollo' }} · Comprobación cada 5 s</span>
             </div>
+            <p>Instancia web: <strong>{{ instancia_web }}</strong></p>
             <div aria-live="polite" aria-atomic="true">
                 <ul class="service-list">
                     <li data-service="web" data-state="unknown"><span class="status-dot" aria-hidden="true"></span>Web <strong>Sin comprobar</strong></li>

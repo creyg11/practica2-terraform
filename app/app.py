@@ -1,5 +1,6 @@
 import json
 import os
+import socket
 
 import psycopg
 from psycopg.rows import dict_row
@@ -13,7 +14,10 @@ CACHE_TTL = 30  # Segundos desde que guardamos la copia; leerla no renueva el pl
 
 @app.context_processor
 def contexto_entorno():
-    return {"is_production": app.config["APP_ENV"] == "production"}
+    return {
+        "is_production": app.config["APP_ENV"] == "production",
+        "instancia_web": socket.gethostname(),
+    }
 
 
 def get_db_connection():
