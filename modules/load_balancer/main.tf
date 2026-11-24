@@ -25,7 +25,7 @@ resource "docker_container" "load_balancer" {
     content = templatefile("${path.module}/nginx-lb.conf.tftpl", {
       minio_host_port = var.minio_host_port
       images_bucket   = var.images_bucket
-      nombres         = var.nombres_replicas
+      web_alias       = var.web_alias
       puerto_web      = var.web_internal_port
       puerto_lb       = var.nginx_port
     })

@@ -5,16 +5,9 @@ upstream flask {
     # https://nginx.org/en/docs/http/ngx_http_upstream_module.html#upstream
     # Los procesos worker de Nginx comparten en memoria la lista de servidores y su estado (sano/caído).
     zone flask 64k;
-    # DNS interno de Docker. Nginx guarda las respuestas IPv4 durante 5 segundos.
     resolver 127.0.0.11 valid=5s ipv6=off;
 
-# Terraform recorre el output del módulo web y escribe una línea por réplica.
-# «resolve» permite a Nginx actualizar su IP si Docker vuelve a crearla con el mismo nombre.
-# Passive Health Check: si una réplica falla 1 vez (max_fails=1), Nginx la saca de la rotación
-# durante 5 segundos (fail_timeout=5s) y vuelve a probarla automáticamente pasado ese tiempo.
-%{ for nombre in nombres ~}
-    server ${nombre}:${puerto_web} max_fails=1 fail_timeout=5s resolve;
-%{ endfor ~}
+    server ${web_alias}:${puerto_web} max_fails=1 fail_timeout=5s resolve;
 }
 
 # Usa el DNS de Docker también si MinIO cambia de IP.

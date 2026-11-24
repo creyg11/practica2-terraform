@@ -63,6 +63,7 @@ module "web" {
   dockerfile        = "Dockerfile"
   network_name      = docker_network.internal_network.name
   replica_count     = var.web_replica_count
+  aliases           = ["web"]
   web_internal_port = var.web_internal_port
 
   # Los outputs host hacen que Flask espere a sus servicios antes de arrancar.
@@ -78,14 +79,14 @@ module "web" {
 module "load_balancer" {
   source = "../../modules/load_balancer"
 
-  minio_host_port = "${module.minio.host}:${var.minio_api_port}"
-  images_bucket   = module.minio.bucket
-
-  container_name        = "nginx-load-balancer"
+  minio_host_port       = "${module.minio.host}:${var.minio_api_port}"
+  images_bucket         = module.minio.bucket
+  container_name        = "practica2-dev-nginx" 
   public_network_name   = docker_network.public_network.name
   internal_network_name = docker_network.internal_network.name
-  nombres_replicas      = module.web.nombres_replicas
   web_internal_port     = var.web_internal_port
   nginx_port            = var.nginx_port
   nginx_bind_ip         = var.nginx_bind_ip
+
+  depends_on            = [module.web]
 }

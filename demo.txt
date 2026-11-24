@@ -86,3 +86,26 @@ sleep 15
 # 3. Verificar que MinIO se ha levantado solo (healthy) y conserva las fotos en su volumen persistente
 docker ps --filter "name=practica2-prod-minio" --format "table {{.Names}}\t{{.Status}}"
 curl -s -o /dev/null -w "Tras caída real de MinIO -> HTTP %{http_code}\n" http://127.0.0.1:8080/static/images/jugadores/david-raya.avif
+
+# Descubrimiento dinamico de contenedores
+docker inspect --format '{{range .Config.Env}}{{println .}}{{end}}' practica2-prod-web-1 | grep -v '^HOSTNAME=' > /tmp/web.env
+
+docker run -d --name web-fantasma --hostname web-fantasma \
+  --network practica2-prod-internal-network \
+  --network-alias web \
+  --env-file /tmp/web.env \
+  $(docker inspect --format '{{.Config.Image}}' practica2-prod-web-1)
+
+sleep 6
+for i in $(seq 1 8); do
+  curl -s http://127.0.0.1:8080/jugadores | grep -oE 'practica2-prod-web-[0-9]+|web-fantasma' | head -n 1
+done
+
+docker rm -f web-fantasma && rm -f /tmp/web.env
+
+
+prueba con count 5
+
+for i in $(seq 1 10); do
+  curl -s http://127.0.0.1:8081/jugadores | grep -oE 'practica2-web-[0-9]+' | head -n 1
+done

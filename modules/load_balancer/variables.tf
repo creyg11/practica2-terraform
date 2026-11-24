@@ -13,9 +13,10 @@ variable "internal_network_name" {
   type        = string
 }
 
-variable "nombres_replicas" {
-  description = "Nombres Docker que la plantilla escribe en el grupo de servidores Flask."
-  type        = list(string)
+variable "web_alias" {
+  description = "Alias DNS compartido por las réplicas Flask en la red interna."
+  type        = string
+  default     = "web"
 }
 
 variable "web_internal_port" {
