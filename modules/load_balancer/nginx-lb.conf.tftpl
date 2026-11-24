@@ -3,16 +3,17 @@ upstream flask {
     # Nginx usa round robin ponderado por defecto cuando el upstream omite el método de balanceo.
     # Cada línea server tiene peso 1 por defecto, así que las réplicas disponibles se turnan.
     # https://nginx.org/en/docs/http/ngx_http_upstream_module.html#upstream
-    # Los procesos de Nginx comparten en memoria la lista de servidores y su estado.
+    # Los procesos worker de Nginx comparten en memoria la lista de servidores y su estado (sano/caído).
     zone flask 64k;
     # DNS interno de Docker. Nginx guarda las respuestas IPv4 durante 5 segundos.
     resolver 127.0.0.11 valid=5s ipv6=off;
 
 # Terraform recorre el output del módulo web y escribe una línea por réplica.
 # «resolve» permite a Nginx actualizar su IP si Docker vuelve a crearla con el mismo nombre.
-# Si cambia la lista de nombres, Terraform genera un fichero distinto en el siguiente apply.
+# Passive Health Check: si una réplica falla 1 vez (max_fails=1), Nginx la saca de la rotación
+# durante 5 segundos (fail_timeout=5s) y vuelve a probarla automáticamente pasado ese tiempo.
 %{ for nombre in nombres ~}
-    server ${nombre}:${puerto_web} resolve;
+    server ${nombre}:${puerto_web} max_fails=1 fail_timeout=5s resolve;
 %{ endfor ~}
 }
 
@@ -23,5 +24,20 @@ server {
     location / {
         # Conserva la ruta solicitada (por ejemplo /jugadores) y la envía al grupo flask.
         proxy_pass http://flask;
+
+        # Cabeceras de transparencia del reverse proxy:
+        # 1. Host: conserva el dominio/puerto original (127.0.0.1:8080) en lugar de reescribirlo a "flask".
+        proxy_set_header Host $host;
+        # 2. X-Real-IP: pasa la IP real del cliente para que Gunicorn no registre siempre la IP interna de Nginx.
+        proxy_set_header X-Real-IP $remote_addr;
+
+        # Detección rápida de fallos y reintento transparente (Failover):
+        # Por defecto Nginx espera 60s para conectar; bajarlo a 2s evita que el usuario note un bloqueo si cae un contenedor.
+        proxy_connect_timeout 2s;
+        # Tiempo máximo esperando respuesta de Flask/Gunicorn una vez establecida la conexión.
+        proxy_read_timeout 5s;
+        # Si la réplica elegida da error de red, timeout o fallo interno (502-504), Nginx reenvía
+        # esa misma petición a otra réplica sana del grupo sin devolver error al navegador.
+        proxy_next_upstream error timeout http_502 http_503 http_504;
     }
 }

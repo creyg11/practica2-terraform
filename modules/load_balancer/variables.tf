@@ -3,8 +3,13 @@ variable "container_name" {
   type        = string
 }
 
-variable "network_name" {
-  description = "Red Docker que comparten Nginx y las réplicas Flask."
+variable "public_network_name" {
+  description = "Red pública (DMZ) desde donde Nginx expone el puerto al host"
+  type        = string
+}
+
+variable "internal_network_name" {
+  description = "Red privada aislada donde se comunican los servicios internos"
   type        = string
 }
 

@@ -10,7 +10,11 @@ resource "docker_container" "load_balancer" {
 
   # En esta red Nginx puede resolver los nombres Docker de las réplicas.
   networks_advanced {
-    name = var.network_name
+    name = var.public_network_name
+  }
+
+  networks_advanced {
+    name = var.internal_network_name
   }
 
   upload {

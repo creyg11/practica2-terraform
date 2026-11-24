@@ -1,0 +1,52 @@
+# 1. Insertar registro manual (Luis de la Fuente)[cite: 16]
+docker exec -i practica2-prod-db psql -U admin -d seleccion < tests/coach-add.sql
+
+# 2. Destruir el contenedor de base de datos a la fuerza
+docker rm -f practica2-prod-db
+
+# 3. Reaplicar Terraform: detecta que falta el contenedor y lo recrea montando el mismo volumen
+terraform -chdir=environments/prod apply -auto-approve
+
+# 4. Verificar que el registro sigue en la base de datos y en la web[cite: 16, 20]
+docker exec -i practica2-prod-db psql -U admin -d seleccion -c "SELECT * FROM jugadores WHERE posicion = 'Entrenador';"
+curl -s http://127.0.0.1:8080/jugadores | grep "Luis de la Fuente"
+
+# 5. Limpiar el dato de prueba[cite: 17]
+docker exec -i practica2-prod-db psql -U admin -d seleccion < tests/coach-remove.sql
+
+
+docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" && echo "---" && find . -maxdepth 3 -not -path '*/.*' | sort
+
+
+# 1. Confirmar que las redes internas tienen el flag Internal = true y las públicas false
+docker network inspect practica2-prod-internal-network practica2-prod-public-network \
+  --format '{{.Name}} -> Internal: {{.Internal}}'
+
+# 2. Verificar que una réplica web NO tiene salida al exterior (debe dar error de red)
+docker exec practica2-prod-web-1 python -c "import urllib.request; urllib.request.urlopen('https://1.1.1.1', timeout=3)"
+
+# 3. Verificar que el balanceador sí atiende en ambos entornos simultáneamente
+curl -s -o /dev/null -w "PROD (8080) -> HTTP %{http_code}\n" http://127.0.0.1:8080/jugadores
+curl -s -o /dev/null -w "DEV  (8081) -> HTTP %{http_code}\n" http://127.0.0.1:8081/jugadores
+
+echo "--- 1. Estado normal (3 réplicas activas) ---"
+for i in $(seq 1 6); do
+  INST=$(curl -s http://127.0.0.1:8080/jugadores | grep -oE 'practica2-prod-web-[0-9]+' | head -n 1)
+  echo "Petición $i -> $INST"
+done
+
+echo "--- 2. Caída de web-2 (el servicio mantiene HTTP 200 entre web-1 y web-3) ---"
+docker stop practica2-prod-web-2
+for i in $(seq 1 6); do
+  CODE=$(curl -s -o /tmp/resp.html -w "%{http_code}" http://127.0.0.1:8080/jugadores)
+  INST=$(grep -oE 'practica2-prod-web-[0-9]+' /tmp/resp.html | head -n 1)
+  echo "Petición $i -> HTTP $CODE | Atendida por: $INST"
+done
+
+echo "--- 3. Recuperación de web-2 (reentra tras fail_timeout=5s) ---"
+docker start practica2-prod-web-2
+sleep 6
+for i in $(seq 1 6); do
+  INST=$(curl -s http://127.0.0.1:8080/jugadores | grep -oE 'practica2-prod-web-[0-9]+' | head -n 1)
+  echo "Petición $i -> $INST"
+done

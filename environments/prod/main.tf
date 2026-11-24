@@ -11,9 +11,18 @@ terraform {
 # Los módulos heredan la conexión con el Docker local.
 provider "docker" {}
 
-resource "docker_network" "app_network" {
-  name   = "practica2-prod-network"
+# Red pública (DMZ): única red con salida exterior y publicación de puertos al host
+resource "docker_network" "public_network" {
+  name   = "practica2-prod-public-network" 
   driver = "bridge"
+}
+
+# Red interna aislada: bloquea salida a Internet y publicación de puertos.
+# Permite únicamente tráfico entre contenedores y resolución DNS interna (127.0.0.11).
+resource "docker_network" "internal_network" {
+  name     = "practica2-prod-internal-network" 
+  driver   = "bridge"
+  internal = true
 }
 
 module "postgres" {
@@ -21,7 +30,7 @@ module "postgres" {
 
   container_name    = "practica2-prod-db"
   volume_name       = "practica2-prod-postgres-data"
-  network_name      = docker_network.app_network.name
+  network_name      = docker_network.internal_network.name
   init_dir          = "${path.module}/../../db/init"
   db_host           = var.db_host
   db_port           = var.db_port
@@ -35,7 +44,7 @@ module "redis" {
   source = "../../modules/redis"
 
   container_name = "practica2-prod-redis"
-  network_name   = docker_network.app_network.name
+  network_name   = docker_network.internal_network.name
   redis_host     = var.redis_host
   redis_port     = var.redis_port
 }
@@ -47,7 +56,7 @@ module "web" {
   image_name        = "practica2-web:prod"
   build_context     = "${path.module}/../../app"
   dockerfile        = "Dockerfile.prod"
-  network_name      = docker_network.app_network.name
+  network_name      = docker_network.internal_network.name
   replica_count     = var.web_replica_count
   web_internal_port = var.web_internal_port
   aliases           = ["web"]
@@ -70,7 +79,8 @@ module "load_balancer" {
   source = "../../modules/load_balancer"
 
   container_name    = "practica2-prod-nginx"
-  network_name      = docker_network.app_network.name
+  public_network_name   = docker_network.public_network.name
+  internal_network_name = docker_network.internal_network.name
   nombres_replicas  = module.web.nombres_replicas
   web_internal_port = var.web_internal_port
   nginx_port        = var.nginx_port
