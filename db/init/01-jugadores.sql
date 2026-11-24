@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS jugadores (
 
 -- Plantilla de España para el Mundial 2026.
 -- Fuente: FIFA · https://www.fifa.com/es/tournaments/mens/worldcup/canadamexicousa2026/teams/spain/squad
--- Fotografías servidas desde app/static/images/jugadores/.
+-- Rutas relativas que la web publica bajo /static/. Nginx obtiene las fotos de MinIO.
 INSERT INTO jugadores (nombre, posicion, imagen) VALUES
     ('David Raya',        'Portero',         'images/jugadores/david-raya.avif'),
     ('Joan García',       'Portero',         'images/jugadores/joan-garcia.avif'),

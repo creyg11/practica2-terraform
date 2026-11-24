@@ -32,3 +32,13 @@ variable "nginx_bind_ip" {
   description = "IP de la máquina donde Docker publica el puerto de Nginx."
   type        = string
 }
+
+variable "minio_host_port" {
+  description = "Nombre DNS y puerto de la API de MinIO en la red interna."
+  type        = string
+}
+
+variable "images_bucket" {
+  description = "Bucket que Nginx consulta para las peticiones a /static/images/."
+  type        = string
+}

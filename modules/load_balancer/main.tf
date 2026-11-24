@@ -23,9 +23,11 @@ resource "docker_container" "load_balancer" {
 
     # El output del módulo web proporciona los nombres y establece la dependencia.
     content = templatefile("${path.module}/nginx-lb.conf.tftpl", {
-      nombres    = var.nombres_replicas
-      puerto_web = var.web_internal_port
-      puerto_lb  = var.nginx_port
+      minio_host_port = var.minio_host_port
+      images_bucket   = var.images_bucket
+      nombres         = var.nombres_replicas
+      puerto_web      = var.web_internal_port
+      puerto_lb       = var.nginx_port
     })
   }
 

@@ -17,9 +17,29 @@ upstream flask {
 %{ endfor ~}
 }
 
+# Usa el DNS de Docker también si MinIO cambia de IP.
+upstream imagenes_minio {
+    zone imagenes_minio 64k;
+    resolver 127.0.0.11 valid=5s ipv6=off;
+    server ${minio_host_port} resolve;
+}
+
 server {
     # Puerto dentro del contenedor Nginx al que Docker reenvía la petición del navegador.
     listen ${puerto_lb};
+
+    location = /static/images/ {
+        return 404;
+    }
+
+    # /static/images/jugadores/foto.avif -> /seleccion/jugadores/foto.avif.
+    # Las páginas, el CSS y el JS siguen el recorrido habitual hacia Flask.
+    location /static/images/ {
+        limit_except GET { deny all; }
+        # MinIO valida Host. Enviamos su nombre DNS y puerto internos.
+        proxy_set_header Host ${minio_host_port};
+        proxy_pass http://imagenes_minio/${images_bucket}/;
+    }
 
     location / {
         # Conserva la ruta solicitada (por ejemplo /jugadores) y la envía al grupo flask.

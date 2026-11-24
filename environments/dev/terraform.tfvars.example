@@ -10,3 +10,7 @@ db_port           = 5432
 postgres_db       = "seleccion"
 postgres_user     = "admin"
 postgres_password = "CAMBIAR_POR_UNA_CONTRASENA_LOCAL"
+
+minio_host              = "minio"
+minio_root_user         = "minioadmin"
+minio_root_password     = "CAMBIAR_POR_UNA_CONTRASENA_LOCAL"

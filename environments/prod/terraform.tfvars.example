@@ -13,3 +13,9 @@ postgres_password = "CAMBIAR_POR_UNA_CONTRASENA_LOCAL"
 
 redis_host = "redis"
 redis_port = 6379
+
+minio_host          = "minio"
+minio_root_user     = "minioadmin"
+minio_root_password = "CAMBIAR_POR_UNA_CONTRASENA_LOCAL"
+# minio_api_port    = 9000  # valor por defecto
+# minio_console_port = 9001 # valor por defecto

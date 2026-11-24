@@ -53,3 +53,31 @@ variable "redis_port" {
   description = "Puerto interno en el que escucha Redis."
   type        = number
 }
+
+variable "minio_host" {
+  description = "Alias de MinIO en la red interna que usan los clientes S3."
+  type        = string
+}
+
+variable "minio_api_port" {
+  description = "Puerto S3 de MinIO en la red interna."
+  type        = number
+  default     = 9000
+}
+
+variable "minio_console_port" {
+  description = "Puerto de la consola web de MinIO en la red interna."
+  type        = number
+  default     = 9001
+}
+
+variable "minio_root_user" {
+  description = "Usuario administrador (access key) de MinIO."
+  type        = string
+}
+
+variable "minio_root_password" {
+  description = "Contraseña administradora (secret key) de MinIO."
+  type        = string
+  sensitive   = true
+}

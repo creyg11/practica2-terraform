@@ -50,3 +50,39 @@ for i in $(seq 1 6); do
   INST=$(curl -s http://127.0.0.1:8080/jugadores | grep -oE 'practica2-prod-web-[0-9]+' | head -n 1)
   echo "Petición $i -> $INST"
 done
+
+# Petición a imagen -> Nginx la desvía a MinIO (Server: MinIO)
+curl -I http://127.0.0.1:8080/static/images/jugadores/david-raya.avif
+
+# Petición dinámica -> Nginx la envía a Flask (Server: gunicorn)
+curl -I http://127.0.0.1:8080/jugadores
+
+# 1. Sin puertos expuestos en el host (conectados solo a internal_network)
+docker ps --filter "name=minio" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+
+# 2. Raíz /static/images/ bloqueada (debe devolver 404)
+curl -s -o /dev/null -w "GET /static/images/ -> HTTP %{http_code}\n" http://127.0.0.1:8080/static/images/
+
+# 3. Escritura/borrado bloqueado por limit_except GET (debe devolver 403)
+curl -s -o /dev/null -w "DELETE imagen -> HTTP %{http_code}\n" -X DELETE http://127.0.0.1:8080/static/images/jugadores/david-raya.avif
+
+# 1. Apply sin cambios -> 0 recursos modificados
+terraform -chdir=environments/prod apply -auto-approve
+
+# 2. Copiar imagen de prueba -> Terraform detecta el nuevo SHA-256 y ejecuta seed
+cp app/static/images/jugadores/david-raya.avif app/static/images/jugadores/test-ponencia.avif
+terraform -chdir=environments/prod apply -auto-approve
+curl -s -o /dev/null -w "Nueva imagen -> HTTP %{http_code}\n" http://127.0.0.1:8080/static/images/jugadores/test-ponencia.avif
+
+# 3. Limpiar archivo de prueba local
+rm app/static/images/jugadores/test-ponencia.avif
+
+# 1. Simular caída real del proceso de MinIO (evitando docker kill para que actúe restart = "unless-stopped")
+sudo kill -9 $(docker inspect --format '{{.State.Pid}}' practica2-prod-minio)
+
+# 2. Esperar el arranque del contenedor (start_period=15s) y el refresco DNS de Nginx (valid=5s)
+sleep 15
+
+# 3. Verificar que MinIO se ha levantado solo (healthy) y conserva las fotos en su volumen persistente
+docker ps --filter "name=practica2-prod-minio" --format "table {{.Names}}\t{{.Status}}"
+curl -s -o /dev/null -w "Tras caída real de MinIO -> HTTP %{http_code}\n" http://127.0.0.1:8080/static/images/jugadores/david-raya.avif

@@ -13,14 +13,14 @@ provider "docker" {}
 
 # Red pública (DMZ): única red con salida exterior y publicación de puertos al host
 resource "docker_network" "public_network" {
-  name   = "practica2-prod-public-network" 
+  name   = "practica2-prod-public-network"
   driver = "bridge"
 }
 
 # Red interna aislada: bloquea salida a Internet y publicación de puertos.
 # Permite únicamente tráfico entre contenedores y resolución DNS interna (127.0.0.11).
 resource "docker_network" "internal_network" {
-  name     = "practica2-prod-internal-network" 
+  name     = "practica2-prod-internal-network"
   driver   = "bridge"
   internal = true
 }
@@ -47,6 +47,22 @@ module "redis" {
   network_name   = docker_network.internal_network.name
   redis_host     = var.redis_host
   redis_port     = var.redis_port
+}
+
+module "minio" {
+  source = "../../modules/minio"
+
+  images_dir = "${path.module}/../../app/static/images"
+
+  container_name      = "practica2-prod-minio"
+  volume_name         = "practica2-prod-minio-data"
+  network_name        = docker_network.internal_network.name
+  minio_host          = var.minio_host
+  minio_api_port      = var.minio_api_port
+  minio_console_port  = var.minio_console_port
+  minio_root_user     = var.minio_root_user
+  minio_root_password = var.minio_root_password
+  restart             = "unless-stopped"
 }
 
 module "web" {
@@ -78,11 +94,14 @@ module "web" {
 module "load_balancer" {
   source = "../../modules/load_balancer"
 
-  container_name    = "practica2-prod-nginx"
+  minio_host_port = "${module.minio.host}:${var.minio_api_port}"
+  images_bucket   = module.minio.bucket
+
+  container_name        = "practica2-prod-nginx"
   public_network_name   = docker_network.public_network.name
   internal_network_name = docker_network.internal_network.name
-  nombres_replicas  = module.web.nombres_replicas
-  web_internal_port = var.web_internal_port
-  nginx_port        = var.nginx_port
-  nginx_bind_ip     = var.nginx_bind_ip
+  nombres_replicas      = module.web.nombres_replicas
+  web_internal_port     = var.web_internal_port
+  nginx_port            = var.nginx_port
+  nginx_bind_ip         = var.nginx_bind_ip
 }
