@@ -9,7 +9,8 @@
   endpoint = "unix:///var/run/docker.sock"
 
   # Dev y prod comparten Docker. El prefijo de prod selecciona sus servicios y sus réplicas.
-  container_name_include = ["${name_prefix}-*"]
+%{ if length(container_patterns) > 1 }  # En dev también incluimos practica2-db y las réplicas practica2-web-*.
+%{ endif }  container_name_include = ${jsonencode(container_patterns)}
   # Así también podemos ver en el listado los contenedores parados o que están reiniciando.
   container_state_include = ["running", "exited", "paused", "restarting"]
 
@@ -28,5 +29,5 @@
   expiration_interval = "20s"
 
 # Consultas de la demo en Prometheus (cada fila corresponde a una réplica):
-# CPU en %: docker_container_cpu_usage_percent{container_name=~"${name_prefix}-web-[0-9]+",cpu="cpu-total"}
-# RAM en MiB: docker_container_mem_usage{container_name=~"${name_prefix}-web-[0-9]+"} / 1024 / 1024
+# CPU en %: docker_container_cpu_usage_percent{container_name=~"${web_name}-[0-9]+",cpu="cpu-total"}
+# RAM en MiB: docker_container_mem_usage{container_name=~"${web_name}-[0-9]+"} / 1024 / 1024

@@ -101,5 +101,12 @@ module "observability" {
   bind_ip               = var.nginx_bind_ip
   prometheus_port       = 9091
 
+  # PostgreSQL y las réplicas de dev conservan los nombres de la primera práctica.
+  enable_extended_metrics       = true
+  docker_socket_gid             = var.docker_socket_gid
+  db_dsn                        = "postgresql://${replace(urlencode(var.postgres_user), "+", "%20")}:${replace(urlencode(var.postgres_password), "+", "%20")}@${module.postgres.host}:${var.db_port}/${replace(urlencode(var.postgres_db), "+", "%20")}?sslmode=disable"
+  additional_container_patterns = ["practica2-db", "practica2-web-*"]
+  web_container_name            = "practica2-web"
+
   depends_on = [module.load_balancer]
 }

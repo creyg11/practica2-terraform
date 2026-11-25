@@ -43,6 +43,7 @@ resource "docker_container" "prometheus" {
     content = templatefile("${path.module}/prometheus.yml.tftpl", {
       nginx_exporter_host     = "${var.name_prefix}-nginx-exporter"
       enable_extended_metrics = var.enable_extended_metrics
+      collect_redis           = var.cache_container_name != ""
       postgres_exporter_host  = "${var.name_prefix}-postgres-exporter"
       redis_exporter_host     = "${var.name_prefix}-redis-exporter"
       telegraf_host           = "${var.name_prefix}-telegraf"
@@ -68,12 +69,12 @@ resource "docker_image" "postgres_exporter" {
 
 // Imagen del exporter que consulta Redis y expone sus métricas para Prometheus.
 resource "docker_image" "redis_exporter" {
-  count        = var.enable_extended_metrics ? 1 : 0
+  count        = var.enable_extended_metrics && var.cache_container_name != "" ? 1 : 0
   name         = "oliver006/redis_exporter:v1.67.0"
   keep_locally = true
 }
 
-# Prod activa las métricas extendidas. El mismo módulo en dev omite esta imagen y su contenedor.
+# Ambos entornos activan Telegraf para medir sus propios contenedores.
 resource "docker_image" "telegraf" {
   count        = var.enable_extended_metrics ? 1 : 0
   name         = "telegraf:1.38.1"
@@ -101,7 +102,7 @@ resource "docker_container" "postgres_exporter" {
 
 // Ejecuta el exporter de Redis solo cuando están activadas las métricas extendidas.
 resource "docker_container" "redis_exporter" {
-  count   = var.enable_extended_metrics ? 1 : 0
+  count   = var.enable_extended_metrics && var.cache_container_name != "" ? 1 : 0
   name    = "${var.name_prefix}-redis-exporter"
   image   = docker_image.redis_exporter[0].image_id
   restart = "unless-stopped"
@@ -127,7 +128,7 @@ resource "docker_container" "telegraf" {
   restart = "unless-stopped"
 
   # 65534 es un usuario sin privilegios. El grupo se obtiene del socket del host
-  # y llega desde terraform.tfvars de prod para que ese usuario pueda conectarse.
+  # y llega desde el terraform.tfvars del entorno para que ese usuario pueda conectarse.
   user          = "65534:${var.docker_socket_gid}"
   security_opts = ["no-new-privileges:true"]
   capabilities {
@@ -147,7 +148,8 @@ resource "docker_container" "telegraf" {
   upload {
     file = "/etc/telegraf/telegraf.conf"
     content = templatefile("${path.module}/telegraf.conf.tftpl", {
-      name_prefix = var.name_prefix
+      container_patterns = concat(["${var.name_prefix}-*"], var.additional_container_patterns)
+      web_name           = coalesce(var.web_container_name, "${var.name_prefix}-web")
     })
   }
 

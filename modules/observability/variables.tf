@@ -30,7 +30,7 @@ variable "prometheus_port" {
 }
 
 variable "enable_extended_metrics" {
-  description = "Activa métricas de PostgreSQL, Redis y contenedores (solo en prod)."
+  description = "Activa las métricas de PostgreSQL y contenedores. Redis se incluye cuando el entorno configura su caché."
   type        = bool
   default     = false
 }
@@ -49,7 +49,19 @@ variable "cache_container_name" {
 }
 
 variable "docker_socket_gid" {
-  description = "GID del socket de Docker. Prod lo pasa al crear Telegraf."
+  description = "GID del socket de Docker que usa Telegraf para consultar el host."
   type        = number
+  default     = null
+}
+
+variable "additional_container_patterns" {
+  description = "Patrones de nombres Docker del entorno que no empiezan por name_prefix."
+  type        = list(string)
+  default     = []
+}
+
+variable "web_container_name" {
+  description = "Nombre base de las réplicas usado en las consultas de ejemplo de Telegraf."
+  type        = string
   default     = null
 }
