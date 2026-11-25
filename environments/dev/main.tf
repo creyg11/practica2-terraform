@@ -90,3 +90,16 @@ module "load_balancer" {
 
   depends_on            = [module.web]
 }
+
+module "observability" {
+  source = "../../modules/observability"
+
+  name_prefix           = "practica2-dev"
+  public_network_name   = docker_network.public_network.name
+  internal_network_name = docker_network.internal_network.name
+  nginx_container_name  = "practica2-dev-nginx"
+  bind_ip               = var.nginx_bind_ip
+  prometheus_port       = 9091
+
+  depends_on = [module.load_balancer]
+}

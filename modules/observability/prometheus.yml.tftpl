@@ -1,0 +1,43 @@
+# Modelo pull extendido (prod): cada 5 segundos Prometheus consulta en paralelo por HTTP dentro
+# de internal_network (usando el DNS interno de Docker) a cuatro recolectores aislados:
+#   1. nginx-exporter (:9113)    -> traduce /stub_status de Nginx (tráfico y conexiones).
+#   2. postgres-exporter (:9187) -> consulta estadísticas SQL internas de PostgreSQL (:5432).
+#   3. redis-exporter (:9121)    -> ejecuta INFO sobre Redis (:6379) para memoria y hits/misses.
+#   4. Telegraf (:9273) -> publica CPU, memoria y estado con el nombre de cada contenedor.
+
+global:
+  # Frecuencia con la que Prometheus consulta cada objetivo para recopilar métricas.
+  scrape_interval: 5s
+  # Frecuencia de evaluación de reglas y alertas, si se definen en la configuración.
+  evaluation_interval: 5s
+
+# Aquí se declaran los servicios de los que Prometheus obtiene métricas.
+scrape_configs:
+  # Prometheus también se monitoriza a sí mismo.
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  # Nginx se monitoriza mediante su exporter, que expone sus métricas.
+  - job_name: "nginx"
+    static_configs:
+      # Terraform sustituye esta variable por el host del exporter; 9113 es su puerto.
+      - targets: ["${nginx_exporter_host}:9113"]
+  
+  %{ if enable_extended_metrics ~}
+
+  - job_name: "postgres"
+    static_configs:
+      - targets: ["${postgres_exporter_host}:9187"]
+
+  - job_name: "redis"
+    static_configs:
+      - targets: ["${redis_exporter_host}:9121"]
+
+  # Prometheus resuelve el nombre de Telegraf por el DNS de Docker. Cada scrape
+  # guarda las muestras en su volumen; la etiqueta container_name identifica la réplica.
+  - job_name: "containers"
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["${telegraf_host}:9273"]
+%{ endif ~}

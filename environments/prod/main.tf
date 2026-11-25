@@ -96,12 +96,31 @@ module "load_balancer" {
 
   minio_host_port       = "${module.minio.host}:${var.minio_api_port}"
   images_bucket         = module.minio.bucket
-  container_name        = "practica2-prod-nginx" 
+  container_name        = "practica2-prod-nginx"
   public_network_name   = docker_network.public_network.name
   internal_network_name = docker_network.internal_network.name
   web_internal_port     = var.web_internal_port
   nginx_port            = var.nginx_port
   nginx_bind_ip         = var.nginx_bind_ip
 
-  depends_on            = [module.web]
+  depends_on = [module.web]
+}
+
+module "observability" {
+  source = "../../modules/observability"
+
+  name_prefix           = "practica2-prod"
+  public_network_name   = docker_network.public_network.name
+  internal_network_name = docker_network.internal_network.name
+  nginx_container_name  = "practica2-prod-nginx"
+  bind_ip               = var.nginx_bind_ip
+  prometheus_port       = 9090
+
+  # Activa los exporters de base de datos y caché, y Telegraf para medir cada réplica.
+  enable_extended_metrics = true
+  docker_socket_gid       = var.docker_socket_gid
+  db_dsn                  = "postgresql://${var.postgres_user}:${var.postgres_password}@practica2-prod-db:${var.db_port}/${var.postgres_db}?sslmode=disable"
+  cache_container_name    = "practica2-prod-redis"
+
+  depends_on = [module.load_balancer]
 }

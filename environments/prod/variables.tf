@@ -81,3 +81,8 @@ variable "minio_root_password" {
   type        = string
   sensitive   = true
 }
+
+variable "docker_socket_gid" {
+  description = "Grupo propietario de /var/run/docker.sock en el host de producción."
+  type        = number
+}

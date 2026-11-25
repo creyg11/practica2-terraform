@@ -54,3 +54,13 @@ server {
         proxy_next_upstream error timeout http_502 http_503 http_504;
     }
 }
+
+# Servidor interno exclusivo para métricas de Nginx Exporter (no publicado al host).
+server {
+    listen 8090;
+    access_log off;
+
+    location = /stub_status {
+        stub_status;
+    }
+}

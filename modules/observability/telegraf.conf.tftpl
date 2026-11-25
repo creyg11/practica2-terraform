@@ -1,0 +1,32 @@
+# Terraform genera este archivo al crear el contenedor Telegraf.
+[agent]
+  # El agente lee Docker cada 5 s y actualiza con esa frecuencia los valores publicados.
+  interval = "5s"
+  flush_interval = "5s"
+
+[[inputs.docker]]
+  # El socket montado en el contenedor permite pedir estadísticas al motor del host.
+  endpoint = "unix:///var/run/docker.sock"
+
+  # Dev y prod comparten Docker. El prefijo de prod selecciona sus servicios y sus réplicas.
+  container_name_include = ["${name_prefix}-*"]
+  # Así también podemos ver en el listado los contenedores parados o que están reiniciando.
+  container_state_include = ["running", "exited", "paused", "restarting"]
+
+  # Para la demo interesa el consumo total por contenedor, sumando todos sus núcleos.
+  perdevice_include = []
+  total_include = ["cpu"]
+  # container_name y container_status ya los proporciona Telegraf. Omitimos las etiquetas
+  # personalizadas de Docker para mantener las series fáciles de consultar.
+  docker_label_exclude = ["*"]
+
+[[outputs.prometheus_client]]
+  # Telegraf atiende GET /metrics en la red interna. Prometheus inicia la consulta.
+  listen = ":9273"
+  # Si deja de llegar una medida, el agente deja de publicarla tras 20 s.
+  # Las muestras que Prometheus ya guardó siguen disponibles para consultar el histórico.
+  expiration_interval = "20s"
+
+# Consultas de la demo en Prometheus (cada fila corresponde a una réplica):
+# CPU en %: docker_container_cpu_usage_percent{container_name=~"${name_prefix}-web-[0-9]+",cpu="cpu-total"}
+# RAM en MiB: docker_container_mem_usage{container_name=~"${name_prefix}-web-[0-9]+"} / 1024 / 1024

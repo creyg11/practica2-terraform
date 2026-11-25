@@ -19,3 +19,6 @@ minio_root_user     = "minioadmin"
 minio_root_password = "CAMBIAR_POR_UNA_CONTRASENA_LOCAL"
 # minio_api_port    = 9000  # valor por defecto
 # minio_console_port = 9001 # valor por defecto
+
+# Grupo que permite a Telegraf consultar Docker. En cada host: stat -c %g /var/run/docker.sock
+docker_socket_gid = 984
