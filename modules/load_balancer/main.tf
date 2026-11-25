@@ -8,6 +8,15 @@ resource "docker_container" "load_balancer" {
   image   = docker_image.nginx.image_id
   restart = "unless-stopped"
 
+  # Comprueba que Nginx atiende HTTP dentro del contenedor, incluso si una réplica Flask cae.
+  healthcheck {
+    test         = ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8090/stub_status"]
+    interval     = "10s"
+    timeout      = "3s"
+    retries      = 3
+    start_period = "5s"
+  }
+
   # En esta red Nginx puede resolver los nombres Docker de las réplicas.
   networks_advanced {
     name = var.public_network_name

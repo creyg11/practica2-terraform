@@ -86,3 +86,14 @@ variable "docker_socket_gid" {
   description = "Grupo propietario de /var/run/docker.sock en el host de producción."
   type        = number
 }
+
+variable "grafana_port" {
+  description = "Puerto de localhost para abrir la interfaz de Grafana en prod."
+  type        = number
+}
+
+variable "grafana_admin_password" {
+  description = "Contraseña inicial del usuario admin de Grafana en prod."
+  type        = string
+  sensitive   = true
+}

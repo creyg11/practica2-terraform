@@ -110,3 +110,21 @@ module "observability" {
 
   depends_on = [module.load_balancer]
 }
+
+module "grafana" {
+  source = "../../modules/grafana"
+
+  container_name        = "practica2-dev-grafana"
+  public_network_name   = docker_network.public_network.name
+  internal_network_name = docker_network.internal_network.name
+  bind_ip               = var.nginx_bind_ip
+  external_port         = var.grafana_port
+  admin_password        = var.grafana_admin_password
+  prometheus_name       = module.observability.prometheus_name
+  web_replicas          = module.web.nombres_replicas
+  health_services = [
+    module.postgres.container_name,
+    module.minio.container_name,
+    module.load_balancer.container_name,
+  ]
+}

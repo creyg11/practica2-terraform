@@ -1,3 +1,8 @@
+output "container_name" {
+  description = "Nombre del contenedor Docker para identificar su healthcheck en Grafana."
+  value       = docker_container.minio.name
+}
+
 output "host" {
   description = "Alias de MinIO en la red interna que usan los clientes S3."
   value       = var.minio_host

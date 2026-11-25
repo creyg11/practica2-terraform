@@ -17,3 +17,6 @@ minio_root_password     = "CAMBIAR_POR_UNA_CONTRASENA_LOCAL"
 
 # Grupo que permite a Telegraf consultar Docker. En cada host: stat -c %g /var/run/docker.sock
 docker_socket_gid = 984
+
+grafana_port           = 3001
+grafana_admin_password = "CAMBIAR_POR_UNA_CONTRASENA_LOCAL"
