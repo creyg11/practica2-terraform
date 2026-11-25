@@ -125,6 +125,21 @@ module "observability" {
   depends_on = [module.load_balancer]
 }
 
+module "loki" {
+  source = "../../modules/loki"
+
+  container_name        = "practica2-prod-loki"
+  internal_network_name = docker_network.internal_network.name
+}
+
+module "alloy" {
+  source = "../../modules/alloy"
+
+  container_name        = "practica2-prod-alloy"
+  internal_network_name = docker_network.internal_network.name
+  loki_url              = module.loki.url
+}
+
 module "grafana" {
   source = "../../modules/grafana"
 
@@ -135,6 +150,7 @@ module "grafana" {
   external_port         = var.grafana_port
   admin_password        = var.grafana_admin_password
   prometheus_name       = module.observability.prometheus_name
+  loki_url              = module.loki.url
   web_replicas          = module.web.nombres_replicas
   health_services = [
     module.postgres.container_name,
