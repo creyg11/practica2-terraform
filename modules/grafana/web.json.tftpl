@@ -9,6 +9,27 @@
     "from": "now-15m",
     "to": "now"
   },
+  "templating": {
+    "list": [
+      {
+        "name": "contenedor",
+        "label": "Contenedor",
+        "type": "query",
+        "datasource": { "type": "loki", "uid": "loki" },
+        "query": "label_values(container)",
+        "refresh": 1,
+        "sort": 1,
+        "multi": false,
+        "includeAll": true,
+        "allValue": ".+",
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        }
+      }
+    ]
+  },
   "panels": [
     {
       "id": 1,
@@ -342,6 +363,30 @@
           }
         }
       ]
+    },
+    {
+      "id": 9,
+      "type": "logs",
+      "title": "Registros de los contenedores ($contenedor)",
+      "description": "Salida stdout y stderr recogida por Alloy desde el socket de Docker y almacenada en Loki.",
+      "gridPos": { "x": 0, "y": 30, "w": 24, "h": 10 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "{container=~\"$contenedor\"}"
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "showLabels": true,
+        "showCommonLabels": false,
+        "wrapLogMessage": true,
+        "prettifyLogMessage": false,
+        "enableLogDetails": true,
+        "dedupStrategy": "none",
+        "sortOrder": "Descending"
+      }
     }
   ]
 }
