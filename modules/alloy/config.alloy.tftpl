@@ -1,0 +1,37 @@
+// Docker devuelve los contenedores de esta red, incluidas las réplicas nuevas.
+discovery.docker "entorno" {
+  host             = "unix:///var/run/docker.sock"
+  refresh_interval = "5s"
+
+  filter {
+    name   = "network"
+    values = [${jsonencode(network_name)}]
+  }
+}
+
+// Docker devuelve nombres como /practica2-dev-nginx. La etiqueta container
+// conserva el nombre sin la barra para poder buscarlo desde Grafana.
+discovery.relabel "etiquetas" {
+  targets = []
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(.+)"
+    target_label  = "container"
+    replacement   = "$1"
+  }
+}
+
+// Lee stdout y stderr de los contenedores descubiertos y etiqueta cada línea.
+loki.source.docker "contenedores" {
+  host          = "unix:///var/run/docker.sock"
+  targets       = discovery.docker.entorno.targets
+  relabel_rules = discovery.relabel.etiquetas.rules
+  forward_to    = [loki.write.entorno.receiver]
+}
+
+// Envía las líneas a la API de escritura del Loki de este entorno.
+loki.write "entorno" {
+  endpoint {
+    url = "${loki_url}/loki/api/v1/push"
+  }
+}

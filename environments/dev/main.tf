@@ -118,6 +118,14 @@ module "loki" {
   internal_network_name = docker_network.internal_network.name
 }
 
+module "alloy" {
+  source = "../../modules/alloy"
+
+  container_name        = "practica2-dev-alloy"
+  internal_network_name = docker_network.internal_network.name
+  loki_url              = module.loki.url
+}
+
 module "grafana" {
   source = "../../modules/grafana"
 
