@@ -9,3 +9,10 @@ datasources:
     isDefault: true
     jsonData:
       timeInterval: 5s
+%{ if loki_url != null ~}
+  - name: Loki
+    uid: loki
+    type: loki
+    access: proxy
+    url: ${loki_url}
+%{ endif ~}

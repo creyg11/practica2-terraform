@@ -37,11 +37,12 @@ resource "docker_container" "grafana" {
     container_path = "/var/lib/grafana"
   }
 
-  # Al arrancar, Grafana lee este archivo y registra Prometheus en el menú de fuentes de datos.
+  # Grafana registra Prometheus para métricas y, si el entorno lo incluye, Loki para logs.
   upload {
     file = "/etc/grafana/provisioning/datasources/prometheus.yml"
-    content = templatefile("${path.module}/prometheus.yml.tftpl", {
+    content = templatefile("${path.module}/datasources.yml.tftpl", {
       prometheus_name = var.prometheus_name
+      loki_url        = var.loki_url
     })
   }
 

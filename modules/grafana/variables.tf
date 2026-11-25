@@ -23,6 +23,12 @@ variable "prometheus_name" {
   type        = string
 }
 
+variable "loki_url" {
+  description = "Dirección interna de Loki cuando el entorno incluye almacenamiento de logs."
+  type        = string
+  default     = null
+}
+
 variable "admin_password" {
   description = "Contraseña inicial del administrador. Grafana la guarda al crear su base de datos."
   type        = string
