@@ -38,6 +38,18 @@ resource "docker_container" "prometheus" {
     name = var.internal_network_name
   }
 
+  # Conecta Prometheus también a la red desde la que Docker publica puertos.
+  networks_advanced {
+    name = var.public_network_name
+  }
+
+  # Prometheus escucha en 9090 dentro de ambos contenedores.
+  ports {
+    internal = 9090
+    external = var.prometheus_port
+    ip       = var.bind_ip
+  }
+
   upload {
     file = "/etc/prometheus/prometheus.yml"
     content = templatefile("${path.module}/prometheus.yml.tftpl", {
