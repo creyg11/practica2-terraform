@@ -152,6 +152,7 @@ module "grafana" {
   prometheus_name       = module.observability.prometheus_name
   loki_url              = module.loki.url
   web_replicas          = module.web.nombres_replicas
+  monitoring_containers = concat(module.observability.container_names, [module.loki.container_name, module.alloy.container_name])
   enable_web_alert      = true
   alert_email           = var.alert_email
   health_services = [

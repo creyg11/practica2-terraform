@@ -58,6 +58,11 @@ variable "web_replicas" {
   type        = list(string)
 }
 
+variable "monitoring_containers" {
+  description = "Nombres de los contenedores de métricas y logs que se pueden seleccionar en el dashboard."
+  type        = list(string)
+}
+
 variable "health_services" {
   description = "Contenedores de la aplicación además de las réplicas web: base de datos, MinIO, Nginx y caché si existe."
   type        = list(string)

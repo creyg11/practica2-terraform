@@ -92,6 +92,8 @@ resource "docker_container" "grafana" {
       replicas        = join("|", var.web_replicas)
       total           = length(var.web_replicas)
       health_services = join("|", concat(var.web_replicas, var.health_services))
+      # El selector incluye también servicios que llevan tiempo sin escribir en stdout o stderr.
+      log_containers = sort(concat(var.web_replicas, var.health_services, var.monitoring_containers, [var.container_name]))
       # El panel de alertas solo aparece en el entorno que carga la regla.
       enable_web_alert = var.enable_web_alert
     })
