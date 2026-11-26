@@ -14,6 +14,8 @@ resource "docker_container" "grafana" {
   restart = "unless-stopped"
   env = [
     "GF_SECURITY_ADMIN_PASSWORD=${var.admin_password}",
+    # Las cookies de localhost se comparten entre puertos. Cada Grafana usa su propio nombre de cookie.
+    "GF_AUTH_LOGIN_COOKIE_NAME=${var.container_name}_session",
     "GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/etc/grafana/dashboards/web.json",
   ]
 
