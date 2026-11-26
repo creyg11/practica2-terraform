@@ -86,12 +86,36 @@
         }
       }
     },
+%{ if enable_web_alert ~}
+    {
+      "id": 10,
+      "type": "alertlist",
+      "title": "Alerta de disponibilidad web",
+      "description": "Grafana evalúa la regla cada 10 segundos. Si detecta cero réplicas, pasa a Pending. Si sigue en cero durante 30 segundos, pasa a Firing y se tramita el aviso por correo.",
+      "gridPos": { "x": 5, "y": 0, "w": 7, "h": 6 },
+      "options": {
+        "viewMode": "list",
+        "groupMode": "default",
+        "dashboardAlerts": true,
+        "alertName": "Producción sin réplicas Flask en ejecución",
+        "showInactiveAlerts": true,
+        "stateFilter": {
+          "normal": true,
+          "pending": true,
+          "firing": true,
+          "recovering": true,
+          "noData": true,
+          "error": true
+        }
+      }
+    },
+%{ endif ~}
     {
       "id": 2,
       "type": "stat",
       "title": "Estado de Nginx",
       "description": "Indica si el exporter puede leer el estado de Nginx. Si Prometheus pierde contacto con el exporter se muestra «Sin datos».",
-      "gridPos": { "x": 5, "y": 0, "w": 5, "h": 6 },
+      "gridPos": { "x": ${enable_web_alert ? 12 : 5}, "y": 0, "w": 5, "h": 6 },
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
@@ -139,7 +163,7 @@
       "type": "timeseries",
       "title": "Tráfico del balanceador",
       "description": "Peticiones HTTP por segundo, promediadas durante el último minuto. Incluye fotos, peticiones a Flask y consultas internas a stub_status.",
-      "gridPos": { "x": 10, "y": 0, "w": 14, "h": 6 },
+      "gridPos": { "x": ${enable_web_alert ? 17 : 10}, "y": 0, "w": ${enable_web_alert ? 7 : 14}, "h": 6 },
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {

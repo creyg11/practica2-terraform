@@ -1,3 +1,21 @@
+variable "enable_web_alert" {
+  description = "Activa la regla de caída total de las réplicas web."
+  type        = bool
+  default     = false
+}
+
+variable "alert_email" {
+  type = object({
+    host          = string
+    from          = string
+    to            = string
+    user          = string
+    password_file = string
+  })
+  sensitive = true
+  default   = null
+}
+
 variable "container_name" {
   type = string
 }

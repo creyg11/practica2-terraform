@@ -1,0 +1,62 @@
+# Producción pasa los nombres de sus tres réplicas Flask mediante module.web.nombres_replicas.
+# Cada 10 segundos, Grafana ejecuta la consulta A en Prometheus para contar cuántas siguen en ejecución.
+# La condición B comprueba si A < 1. Si caen dos réplicas, queda una y la condición es falsa.
+# Si cae la tercera y el recuento sigue en cero durante 30 segundos, la alerta pasa a Firing.
+# Con el correo habilitado, Grafana avisa de la caída y de la recuperación cuando vuelve alguna réplica.
+apiVersion: 1
+groups:
+  - orgId: 1
+    name: Web de producción
+    folder: Producción
+    interval: 10s
+    rules:
+      - uid: prod-web-sin-replicas
+        title: Producción sin réplicas Flask en ejecución
+        condition: B
+        for: 30s
+        # Una pérdida de telemetría no demuestra que se hayan parado todas las réplicas.
+        noDataState: KeepLast
+        execErrState: KeepLast
+        labels:
+          entorno: prod
+          servicio: web
+        annotations:
+          summary: Todas las réplicas Flask de producción están paradas.
+          description: Docker lleva al menos 30 segundos sin registrar ninguna réplica web en ejecución. Revisa los contenedores y sus logs en Grafana.
+          __dashboardUid__: web-balanceador
+          __panelId__: "1"
+        data:
+          - refId: A
+            datasourceUid: prometheus
+            relativeTimeRange: { from: 60, to: 0 }
+            model:
+              refId: A
+              instant: true
+              range: false
+              # Devuelve cero si desaparecen las réplicas pero Telegraf sigue viendo otros contenedores.
+              expr: >-
+                (count(count by (container_name) (docker_container_status_pid{job="containers",container_name=~"${replicas}",container_status="running"}))
+                or (0 * count(docker_container_status_pid{job="containers"})))
+                and on() (up{job="containers"} == 1)
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              refId: B
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: lt, params: [1] }
+%{ if send_mail ~}
+        notification_settings:
+          receiver: Correo de producción
+
+contactPoints:
+  - orgId: 1
+    name: Correo de producción
+    receivers:
+      - uid: prod-web-email
+        type: email
+        disableResolveMessage: false
+        settings:
+          addresses: $ALERT_MAIL_TO
+%{ endif ~}

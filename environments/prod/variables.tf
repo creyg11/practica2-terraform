@@ -1,3 +1,16 @@
+variable "alert_email" {
+  description = "Servidor SMTP y destinatario de las alertas de prod. Rellenar en terraform.tfvars local."
+  type = object({
+    host          = string
+    from          = string
+    to            = string
+    user          = string
+    password_file = string
+  })
+  sensitive = true
+  default   = null
+}
+
 variable "web_internal_port" {
   description = "Puerto en el que escucha la aplicación dentro del contenedor."
   type        = number

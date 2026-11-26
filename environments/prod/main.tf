@@ -152,6 +152,8 @@ module "grafana" {
   prometheus_name       = module.observability.prometheus_name
   loki_url              = module.loki.url
   web_replicas          = module.web.nombres_replicas
+  enable_web_alert      = true
+  alert_email           = var.alert_email
   health_services = [
     module.postgres.container_name,
     module.minio.container_name,
