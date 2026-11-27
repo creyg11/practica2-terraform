@@ -1,13 +1,3 @@
-terraform {
-  required_providers {
-    docker = {
-      source = "kreuzwerker/docker"
-      # La versión de clase usaba la API 1.41. Docker Engine 29.1.3 exige al menos la 1.44.
-      version = "~> 4.6.0"
-    }
-  }
-}
-
 # Los módulos heredan la conexión con el Docker local.
 provider "docker" {}
 
