@@ -12,6 +12,15 @@ resource "docker_container" "loki" {
   image   = docker_image.loki.image_id
   restart = "unless-stopped"
 
+  # Loki responde 200 cuando sus componentes están listos para atender peticiones.
+  healthcheck {
+    test         = ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3100/ready"]
+    interval     = "15s"
+    timeout      = "5s"
+    retries      = 3
+    start_period = "45s"
+  }
+
   # Grafana consulta Loki por el nombre del contenedor y el puerto interno 3100.
   networks_advanced {
     name = var.internal_network_name

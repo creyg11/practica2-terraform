@@ -1,6 +1,13 @@
 resource "docker_image" "nginx_exporter" {
-  name         = "nginx/nginx-prometheus-exporter:1.4.0"
+  name         = "${var.name_prefix}-nginx-exporter:1.4.0-health"
   keep_locally = true
+  build {
+    context    = "${path.module}/../http-healthcheck"
+    build_args = { BASE_IMAGE = "nginx/nginx-prometheus-exporter:1.4.0" }
+  }
+  triggers = {
+    dockerfile = filesha256("${path.module}/../http-healthcheck/Dockerfile")
+  }
 }
 
 resource "docker_image" "prometheus" {
@@ -18,6 +25,15 @@ resource "docker_container" "nginx_exporter" {
   image   = docker_image.nginx_exporter.image_id
   restart = "unless-stopped"
 
+  # Comprueba que el exporter de Nginx sirve su endpoint de métricas.
+  healthcheck {
+    test         = ["CMD", "/usr/local/bin/busybox", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:9113/metrics"]
+    interval     = "15s"
+    timeout      = "5s"
+    retries      = 3
+    start_period = "20s"
+  }
+
   # Le indica al contenedor a qué nombre DNS interno y puerto tiene que pedir los datos.
   command = [
     "--nginx.scrape-uri=http://${var.nginx_container_name}:8090/stub_status"
@@ -33,6 +49,15 @@ resource "docker_container" "prometheus" {
   name    = "${var.name_prefix}-prometheus"
   image   = docker_image.prometheus.image_id
   restart = "unless-stopped"
+
+  # Prometheus devuelve 200 cuando ya puede atender consultas.
+  healthcheck {
+    test         = ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:9090/-/ready"]
+    interval     = "15s"
+    timeout      = "5s"
+    retries      = 3
+    start_period = "20s"
+  }
 
   networks_advanced {
     name = var.internal_network_name
@@ -82,8 +107,15 @@ resource "docker_image" "postgres_exporter" {
 // Imagen del exporter que consulta Redis y expone sus métricas para Prometheus.
 resource "docker_image" "redis_exporter" {
   count        = var.enable_extended_metrics && var.cache_container_name != "" ? 1 : 0
-  name         = "oliver006/redis_exporter:v1.67.0"
+  name         = "${var.name_prefix}-redis-exporter:v1.67.0-health"
   keep_locally = true
+  build {
+    context    = "${path.module}/../http-healthcheck"
+    build_args = { BASE_IMAGE = "oliver006/redis_exporter:v1.67.0" }
+  }
+  triggers = {
+    dockerfile = filesha256("${path.module}/../http-healthcheck/Dockerfile")
+  }
 }
 
 # Ambos entornos activan Telegraf para medir sus propios contenedores.
@@ -99,6 +131,15 @@ resource "docker_container" "postgres_exporter" {
   name    = "${var.name_prefix}-postgres-exporter"
   image   = docker_image.postgres_exporter[0].image_id
   restart = "unless-stopped"
+
+  # Prometheus debe poder leer las métricas del exporter de PostgreSQL.
+  healthcheck {
+    test         = ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:9187/metrics"]
+    interval     = "15s"
+    timeout      = "5s"
+    retries      = 3
+    start_period = "20s"
+  }
   # Evita que procesos del contenedor adquieran privilegios adicionales durante la ejecución.
   security_opts = ["no-new-privileges:true"]
 
@@ -118,6 +159,15 @@ resource "docker_container" "redis_exporter" {
   name    = "${var.name_prefix}-redis-exporter"
   image   = docker_image.redis_exporter[0].image_id
   restart = "unless-stopped"
+
+  # Comprueba el endpoint del exporter, incluso cuando monitoriza una caída de Redis.
+  healthcheck {
+    test         = ["CMD", "/usr/local/bin/busybox", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:9121/metrics"]
+    interval     = "15s"
+    timeout      = "5s"
+    retries      = 3
+    start_period = "20s"
+  }
   # Evita que procesos del contenedor adquieran privilegios adicionales durante la ejecución.
   security_opts = ["no-new-privileges:true"]
 
@@ -138,6 +188,15 @@ resource "docker_container" "telegraf" {
   name    = "${var.name_prefix}-telegraf"
   image   = docker_image.telegraf[0].image_id
   restart = "unless-stopped"
+
+  # Comprueba el mismo endpoint de Telegraf que consulta Prometheus.
+  healthcheck {
+    test         = ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://127.0.0.1:9273/metrics"]
+    interval     = "15s"
+    timeout      = "5s"
+    retries      = 3
+    start_period = "20s"
+  }
 
   # 65534 es un usuario sin privilegios. El grupo se obtiene del socket del host
   # y llega desde el terraform.tfvars del entorno para que ese usuario pueda conectarse.

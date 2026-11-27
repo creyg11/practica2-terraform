@@ -12,6 +12,15 @@ resource "docker_container" "grafana" {
   name    = var.container_name
   image   = docker_image.grafana.image_id
   restart = "unless-stopped"
+
+  # La API de salud comprueba que Grafana puede acceder a su base de datos.
+  healthcheck {
+    test         = ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://127.0.0.1:3000/api/health"]
+    interval     = "15s"
+    timeout      = "5s"
+    retries      = 3
+    start_period = "20s"
+  }
   env = concat([
     "GF_SECURITY_ADMIN_PASSWORD=${var.admin_password}",
     # Las cookies de localhost se comparten entre puertos. Cada Grafana usa su propio nombre de cookie.
