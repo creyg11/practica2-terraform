@@ -89,9 +89,14 @@ resource "docker_container" "grafana" {
   upload {
     file = "/etc/grafana/dashboards/web.json"
     content = templatefile("${path.module}/web.json.tftpl", {
-      replicas        = join("|", var.web_replicas)
-      total           = length(var.web_replicas)
-      health_services = join("|", concat(var.web_replicas, var.health_services))
+      replicas = join("|", var.web_replicas)
+      total    = length(var.web_replicas)
+      history_query = templatefile("${path.module}/replica-history.promql.tftpl", {
+        replicas = var.web_replicas
+      })
+      health_query = templatefile("${path.module}/container-health.promql.tftpl", {
+        containers = concat(var.web_replicas, var.health_services)
+      })
       # El selector incluye también servicios que llevan tiempo sin escribir en stdout o stderr.
       log_containers = sort(concat(var.web_replicas, var.health_services, var.monitoring_containers, [var.container_name]))
       # El panel de alertas solo aparece en el entorno que carga la regla.

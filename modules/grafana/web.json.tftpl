@@ -265,13 +265,13 @@
       "id": 7,
       "type": "state-timeline",
       "title": "Historial de las réplicas Flask",
-      "description": "Cada franja representa una réplica. Verde indica que Docker la observó en ejecución y rojo, parada, en pausa o reiniciándose. Un hueco indica ausencia de muestras. Telegraf puede tardar unos 20 s en retirar el estado anterior; durante esa transición tiene prioridad el estado de parada.",
+      "description": "Cada franja corresponde a una réplica esperada en este entorno. Verde indica que estaba en ejecución. Rojo indica que estaba fuera de ejecución o ausente mientras Telegraf seguía leyendo Docker. Gris indica que faltaban tanto la lectura de la réplica como la del motor Docker.",
       "gridPos": { "x": 0, "y": 14, "w": 12, "h": 8 },
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
           "refId": "A",
-          "expr": "0 * group by (container_name) (docker_container_status_pid{job=\"containers\",container_name=~\"${replicas}\",container_status!=\"running\"})\nor group by (container_name) (docker_container_status_pid{job=\"containers\",container_name=~\"${replicas}\",container_status=\"running\"})",
+          "expr": ${jsonencode(history_query)},
           "legendFormat": "{{container_name}}",
           "range": true,
           "instant": false
@@ -283,8 +283,9 @@
           "mappings": [{
             "type": "value",
             "options": {
-              "0": { "text": "Fuera de ejecución", "color": "red" },
-              "1": { "text": "En ejecución", "color": "green" }
+              "0": { "text": "Fuera de ejecución o ausente", "color": "red" },
+              "1": { "text": "En ejecución", "color": "green" },
+              "2": { "text": "Sin lectura", "color": "#808080" }
             }
           }]
         },
@@ -302,13 +303,13 @@
       "id": 8,
       "type": "stat",
       "title": "Salud de los contenedores",
-      "description": "Docker comprueba las réplicas Flask, PostgreSQL, MinIO, Nginx y Redis cuando el entorno tiene caché. Si todavía falta la primera medida, la tarjeta lo indica. Si hay dos estados durante la caducidad de las métricas, se priorizan parada, fallo e inicio, en ese orden.",
+      "description": "Cada servicio declarado en Terraform conserva su tarjeta. «Fuera de ejecución» indica que Docker ha comunicado la parada, pausa o reinicio. «Parado o ausente» indica que Telegraf sigue leyendo Docker y el servicio ya no aparece en sus métricas. «Sin lectura» indica que falta el resultado del chequeo o la lectura de Docker.",
       "gridPos": { "x": 12, "y": 14, "w": 12, "h": 8 },
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
           "refId": "A",
-          "expr": "4 * group by (container_name) (docker_container_status_pid{job=\"containers\",container_name=~\"${health_services}\",container_status!=\"running\"})\nor 0 * group by (container_name) (docker_container_health_failing_streak{job=\"containers\",container_name=~\"${health_services}\",health_status=\"unhealthy\"})\nor group by (container_name) (docker_container_health_failing_streak{job=\"containers\",container_name=~\"${health_services}\",health_status=\"starting\"})\nor 2 * group by (container_name) (docker_container_health_failing_streak{job=\"containers\",container_name=~\"${health_services}\",health_status=\"healthy\"})\nor 3 * group by (container_name) (docker_container_status_pid{job=\"containers\",container_name=~\"${health_services}\"})",
+          "expr": ${jsonencode(health_query)},
           "legendFormat": "{{container_name}}",
           "range": false,
           "instant": true
@@ -323,7 +324,8 @@
               "1": { "text": "Iniciando", "color": "orange" },
               "2": { "text": "Sano", "color": "green" },
               "3": { "text": "Sin lectura", "color": "blue" },
-              "4": { "text": "Fuera de ejecución", "color": "red" }
+              "4": { "text": "Fuera de ejecución", "color": "red" },
+              "5": { "text": "Parado o ausente", "color": "red" }
             }
           }]
         },

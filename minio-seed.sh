@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Sube las imágenes de la aplicación al bucket de MinIO y habilita su descarga pública.
 # Terraform pasa el contenedor del entorno. Para repetirlo a mano: bash minio-seed.sh dev
 set -euo pipefail
 

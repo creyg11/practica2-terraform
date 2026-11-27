@@ -1,0 +1,16 @@
+# Si coinciden dos muestras durante la caducidad de Telegraf, prevalece la parada.
+4 * group by (container_name) (docker_container_status_pid{job="containers",container_name=~"${join("|", containers)}",container_status!="running"})
+or 0 * group by (container_name) (docker_container_health_failing_streak{job="containers",container_name=~"${join("|", containers)}",health_status="unhealthy"})
+or group by (container_name) (docker_container_health_failing_streak{job="containers",container_name=~"${join("|", containers)}",health_status="starting"})
+or 2 * group by (container_name) (docker_container_health_failing_streak{job="containers",container_name=~"${join("|", containers)}",health_status="healthy"})
+or 3 * group by (container_name) (docker_container_status_pid{job="containers",container_name=~"${join("|", containers)}"})
+# Si falta la serie de un nombre, usamos el inventario esperado de Terraform.
+or (
+  (
+%{ for i, name in containers ~}
+    ${i == 0 ? "" : "or "}label_replace(vector(1), "container_name", ${jsonencode(name)}, "", "")
+%{ endfor ~}
+  )
+  * on() group_left()
+    (5 * group(docker_n_containers{job="containers"}) or vector(3))
+)

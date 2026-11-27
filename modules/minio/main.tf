@@ -17,9 +17,7 @@ resource "docker_container" "minio" {
 
   # Bitnami MinIO arranca con /opt/bitnami/scripts/minio/run.sh por defecto.
   # Las variables de entorno que sigue la imagen son:
-  #   MINIO_ROOT_USER      → access key (mínimo 3 caracteres)
-  #   MINIO_ROOT_PASSWORD  → secret key (mínimo 8 caracteres)
-  #   MINIO_API_PORT_NUMBER / MINIO_CONSOLE_PORT_NUMBER → puertos opcionales
+
   env = [
     "MINIO_ROOT_USER=${var.minio_root_user}",
     "MINIO_ROOT_PASSWORD=${var.minio_root_password}",

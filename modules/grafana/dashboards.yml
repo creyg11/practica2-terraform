@@ -1,3 +1,4 @@
+#configura el aprovisionamiento automático de paneles de Grafana.
 apiVersion: 1
 providers:
   - name: practica

@@ -1,0 +1,13 @@
+# Una parada observada prevalece mientras Telegraf retira la muestra de ejecución anterior.
+0 * group by (container_name) (docker_container_status_pid{job="containers",container_name=~"${join("|", replicas)}",container_status!="running"})
+or group by (container_name) (docker_container_status_pid{job="containers",container_name=~"${join("|", replicas)}",container_status="running"})
+# En cada instante, completa las filas de las réplicas esperadas que han dejado de emitir.
+or (
+  (
+%{ for i, name in replicas ~}
+    ${i == 0 ? "" : "or "}label_replace(vector(1), "container_name", ${jsonencode(name)}, "", "")
+%{ endfor ~}
+  )
+  * on() group_left()
+    (0 * group(docker_n_containers{job="containers"}) or vector(2))
+)
